@@ -6,7 +6,11 @@ public class BlocoChave {
     private byte[] chave;
     private final int[] L;
     private final int tamanhoChave;
-    
+
+    /**
+     * Constroi um objeto criador de blocos de chaves para o RC6
+     * @param senha senha a utilizar como semente para as chaves
+     */
     public BlocoChave(String senha){
         this.tamanhoChave = 128;
         gerarBloco(senha);
@@ -14,8 +18,8 @@ public class BlocoChave {
     }
 
     /**
-     * Gerar um array de bytes com base no tamanho da senha
-     * @param senha
+     * Gerar um array com 128 bytes de tamanho
+     * @param senha senha para utilizar como semente
      */
     private void gerarBloco(String senha){
         byte[] aux = senha.getBytes(StandardCharsets.UTF_16);
@@ -28,12 +32,16 @@ public class BlocoChave {
 
     /**
      * Obter o array de chave de 128 bytes
-     * @return bloco de 128 bits
+     * @return bloco de 128 bytes
      */
     public int[] getChave(){
         return this.L;
     }
 
+    /**
+     * Gera um array de chaves base para utilizar no algoritmo RC6
+     * @return array de inteiros
+     */
     public int[] gerarChave(){
         int c = this.tamanhoChave/4;
         int[] L = new int[c];

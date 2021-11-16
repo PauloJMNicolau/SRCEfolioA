@@ -12,18 +12,33 @@ public class RC6 {
     private ArrayList<int[]> texto;
     private int[] chaveS;
     private ArrayList<int[]> textoEncriptado;
-    private ArrayList<int[]> textoDecriptado;
+    private ArrayList<int[]> textoDesencriptado;
 
-
-    public RC6(ArrayList<int[]> texto, String senha) {
+    /**
+     * Construtor que inicia um objeto com texto pré-inserido
+     * @param texto texto inicial
+     * @param senha senha inicial
+     */
+    public RC6(String texto, String senha) {
         this.iteracoes = 20;
         this.tamanhoPalavra = 32;
         this.PHI = (1 + Math.sqrt(5))/2;
-        this.P = calculateOdd((Math.E -2) * Math.pow(2, this.tamanhoPalavra));
-        this.Q = calculateOdd( (PHI - 1) * Math.pow(2, this.tamanhoPalavra));
+        this.P = calcularImpar((Math.E -2) * Math.pow(2, this.tamanhoPalavra));
+        this.Q = calcularImpar( (PHI - 1) * Math.pow(2, this.tamanhoPalavra));
+        this.dividirEmBlocos(texto);
         this.senha = new BlocoChave(senha);
-        this.texto = texto;
         this.chaveS = gerarChaves();
+    }
+
+    /**
+     * Construtor que inicia um objeto sem texto pré-inserido
+     */
+    public RC6() {
+        this.iteracoes = 20;
+        this.tamanhoPalavra = 32;
+        this.PHI = (1 + Math.sqrt(5))/2;
+        this.P = calcularImpar((Math.E -2) * Math.pow(2, this.tamanhoPalavra));
+        this.Q = calcularImpar( (PHI - 1) * Math.pow(2, this.tamanhoPalavra));
     }
 
     /**
@@ -31,7 +46,7 @@ public class RC6 {
      * @param value - valor em ponto flutuante
      * @return valor inteiro.
      */
-    private int calculateOdd(double value){
+    private int calcularImpar(double value){
         try{
             if(value % 2==0)
                 return (int)Math.round(value)+1;
@@ -41,14 +56,6 @@ public class RC6 {
             return 1;
         }
     }
-/*
-    private int rotateLeft(int palavra, int rotacao){
-        return (palavra << rotacao) | (palavra >> (32 - rotacao));
-    }
-
-    private int rotateRight(int palavra, int rotacao){
-        return (palavra >> rotacao) | (palavra << (32 - rotacao));
-    }*/
 
     /**
      * Gerar as chaves de encriptação (Key Schedule)
@@ -75,7 +82,12 @@ public class RC6 {
         return chaves;
     }
 
-    private int[] decriptarBlocos(int[] bloco){
+    /**
+     * Desencripta o bloco de texto fornecido
+     * @param bloco bloco de texto a desencriptar
+     * @return bloco desencriptado
+     */
+    private int[] desencriptarBlocos(int[] bloco){
         int[] chaves = this.chaveS;
         int valor = (int) Math.log(this.tamanhoPalavra);
         int A = bloco[0];
@@ -105,13 +117,11 @@ public class RC6 {
         return new int[] {A,B,C,D};
     }
 
-    public void encriptar(){
-        this.textoEncriptado = getTexto();
-        for(int i =0; i< textoEncriptado.size(); i++){
-            textoEncriptado.set(i,encriptarBlocos(textoEncriptado.get(i)));
-        }
-    }
-
+    /**
+     * Encripta o bloco de texto fornecido
+     * @param bloco bloco de texto a encriptar
+     * @return bloco encriptado
+     */
     private int[] encriptarBlocos(int[] bloco){
         int[] chaves = this.chaveS;
         int valor = (int) Math.log(this.tamanhoPalavra);
@@ -140,23 +150,119 @@ public class RC6 {
         return new int[] {A,B,C,D};
     }
 
-    public void decriptar(){
-        this.textoDecriptado = this.getTextoEncriptado();
-        for(int i =0; i< textoDecriptado.size(); i++){
-            textoDecriptado.set(i,decriptarBlocos(textoDecriptado.get(i)));
+    /**
+     * Encripta o texto fornecido
+     * @param texto texto a encriptar
+     */
+    public void encriptar(String texto, String senha){
+        dividirEmBlocos(texto);
+        this.senha = new BlocoChave(senha);
+        this.chaveS = gerarChaves();
+        encriptar();
+    }
+
+    /**
+     * Encripta o texto anteriormente fornecido
+     */
+    public void encriptar(){
+        this.textoEncriptado = new ArrayList<>(this.texto);
+        for(int i =0; i< textoEncriptado.size(); i++){
+            textoEncriptado.set(i,encriptarBlocos(textoEncriptado.get(i)));
         }
     }
 
-    public ArrayList<int[]> getTexto(){
-        return new ArrayList<>(this.texto);
+    /**
+     * Desencripta o texto fornecido
+     */
+    public void desencriptar(String texto, String senha){
+        dividirEmBlocos(texto);
+        this.senha = new BlocoChave(senha);
+        this.chaveS = gerarChaves();
+        desencriptar(this.texto);
     }
 
-    public ArrayList<int[]> getTextoEncriptado(){
-        return new ArrayList<>(this.textoEncriptado);
+    /**
+     * Desencripta o texto fornecido em blocos
+     */
+    private void desencriptar(ArrayList<int[]> blocosEncriptados){
+        this.textoDesencriptado = new ArrayList<>(blocosEncriptados);
+        for(int i = 0; i< textoDesencriptado.size(); i++){
+            textoDesencriptado.set(i, desencriptarBlocos(textoDesencriptado.get(i)));
+        }
     }
 
-    public ArrayList<int[]> getTextoDecriptado(){
-        return new ArrayList<>(this.textoDecriptado);
+    /**
+     * Desencripta o texto anteriormente fornecido
+     */
+    public void desencriptar(){
+        this.textoDesencriptado = new ArrayList<>(this.textoEncriptado);
+        for(int i = 0; i< textoDesencriptado.size(); i++){
+            textoDesencriptado.set(i, desencriptarBlocos(textoDesencriptado.get(i)));
+        }
     }
 
+    /**
+     * Divide o texto em blocos de 128bits (4 Integer)
+     * @param texto texto a dividir em blocos
+     */
+    private void dividirEmBlocos(String texto){
+        this.texto = new ArrayList<>();
+        char[] letras = texto.toCharArray();
+        int[] letrasAux = new int[letras.length];
+        int i = 0;
+        for(char carater: letras){
+            letrasAux[i++] = carater;
+        }
+        int index = 0;
+        int[] aux = new int[4];
+        for(int letra: letrasAux){
+            if(index == 4){
+                this.texto.add(aux);
+                aux = new int[4];
+                index = 0;
+            }
+            aux[index++] = letra;
+        }
+        if(index!=0)
+            this.texto.add(aux);
+    }
+
+    /**
+     * Retorna o Texto Desencriptado
+     * @return String de texto desencriptado
+     */
+    public String getTextoDesencriptado(){
+        String texto = reconverterTexto(this.textoDesencriptado);
+        char[] aux = texto.toCharArray();
+        while(aux[aux.length-1] == '\u0000'){
+            char[] aux2 = new char[aux.length-1];
+            System.arraycopy(aux, 0, aux2, 0, aux.length - 1);
+            aux = aux2;
+        }
+        return new String(aux);
+    }
+
+    /**
+     * Retorna o Texto Encriptado
+     * @return String de texto encriptado
+     */
+    public String getTextoEncriptado(){
+        return reconverterTexto(this.textoEncriptado);
+    }
+
+    /**
+     * Transforma o texto dividido em blocos numa string
+     * @param blocos - Blocos de texto a juntar
+     * @return String de Texto convertido.
+     */
+    private String reconverterTexto(ArrayList<int[]> blocos){
+        StringBuilder texto = new StringBuilder();
+        for(int[] bloco: blocos){
+            for(int carater: bloco){
+                char aux = (char) carater;
+                texto.append(aux);
+            }
+        }
+        return texto.toString();
+    }
 }
